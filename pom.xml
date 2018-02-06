@@ -17,6 +17,9 @@
 	<artifactId>format-csv</artifactId>
 	<version>8.5-SNAPSHOT</version>
 
+	<name>Format_CSV</name>
+	<description>Plugin to support reading and writing CSV files with GATE and GCP</description>
+
 	<licenses>
 		<license>
 			<name>GNU Lesser General Public License (LGPL), Version 3</name>

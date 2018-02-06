@@ -17,10 +17,9 @@ package gate.cloud.io.csv;
 import static gate.cloud.io.IOConstants.PARAM_ENCODING;
 import static gate.cloud.io.IOConstants.PARAM_FILE_EXTENSION;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -33,17 +32,22 @@ import gate.AnnotationSet;
 import gate.Document;
 import gate.Utils;
 import gate.cloud.batch.DocumentID;
-import gate.cloud.io.file.AbstractFileOutputHandler;
+import gate.cloud.io.AbstractOutputHandler;
 import gate.cloud.io.file.StreamingFileOutputHelper;
 import gate.util.GateException;
 
-public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
+/**
+ * GCP output handler that writes CSV files.
+ */
+public class CSVStreamingOutputHandler extends AbstractOutputHandler {
 
   public static final String PARAM_SEPARATOR_CHARACTER = "separator";
 
   public static final String PARAM_QUOTE_CHARACTER = "quote";
 
   public static final String PARAM_COLUMNS = "columns";
+
+  public static final String PARAM_COLUMN_HEADERS = "columnHeaders";
 
   public static final String PARAM_ANNOTATION_SET_NAME = "annotationSetName";
 
@@ -60,30 +64,45 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
 
   protected String annotationSetName, annotationType;
 
+  /**
+   * Column specifications, either .docFeature, annType (= string
+   * under annotation) or annType.feature.
+   */
   protected String[] columns;
+  
+  /**
+   * Column headings to be written as the first line of each CSV
+   * file chunk.  If null, no header row will be written.
+   */
+  protected String[] columnHeaders;
   
   protected boolean containedOnly;
   
-  private StreamingFileOutputHelper<byte[], OutputStream> helper;
+  protected String encoding;
+  
+  private StreamingFileOutputHelper<String[], CSVWriter> helper;
   
   public CSVStreamingOutputHandler() {
-    helper = new StreamingFileOutputHelper<byte[], OutputStream>(
-        new byte[0],
-        // we use the output stream as-is
-        x -> x,
-        (OutputStream os, byte[] bytes) -> {
-          os.write(bytes);
-          os.flush();
+    helper = new StreamingFileOutputHelper<String[], CSVWriter>(
+        new String[0],
+        // opening a new chunk - wrap the stream in a CSVWriter
+        stream -> {
+          CSVWriter w = new CSVWriter(new OutputStreamWriter(stream, encoding), separatorChar, quoteChar);
+          if(columnHeaders != null) w.writeNext(columnHeaders);
+          return w;
         },
-        (byte[] bytes) -> bytes.length);
+        // write an item
+        (CSVWriter w, String[] item) -> {
+          w.writeNext(item);
+          w.flush();
+        },
+        (String[] item) -> {
+          // approximate the *bytes* written as total number of
+          // *characters* in the column values plus 2n quotes and
+          // n-1 commas and 1 newline
+          return Arrays.stream(item).mapToInt(v -> v.length()).sum() + 3*item.length;
+        });
   }
-  
-  protected ThreadLocal<ByteArrayOutputStream> baos =
-      new ThreadLocal<ByteArrayOutputStream>() {
-        protected ByteArrayOutputStream initialValue() {
-          return new ByteArrayOutputStream();
-        }
-      };
 
   @Override
   protected void configImpl(Map<String, String> configData) throws IOException,
@@ -93,9 +112,6 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
       // set the extension to csv if nothing is provided
       configData.put(PARAM_FILE_EXTENSION, ".csv");
     }
-
-    // handle the standard streaming output config options
-    super.configImpl(configData);
 
     // configuration params for the CSV document output
     encoding =
@@ -114,6 +130,14 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
 
     // the details of the columns to output
     columns = configData.get(PARAM_COLUMNS).split(",\\s*");
+    
+    // column headers - if unspecified no headers will be written
+    if(configData.containsKey(PARAM_COLUMN_HEADERS)) {
+      columnHeaders = configData.get(PARAM_COLUMN_HEADERS).split(",\\s*");
+      if(columnHeaders.length != columns.length) {
+        throw new GateException("columns and columnHeaders must be lists of the same length");
+      }
+    }
 
     // the annotation set to read annotations from
     annotationSetName = configData.get(PARAM_ANNOTATION_SET_NAME);
@@ -131,33 +155,27 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
     containedOnly =
         configData.containsKey(PARAM_CONTAINED_ONLY) ? Boolean
             .parseBoolean(configData.get(PARAM_CONTAINED_ONLY)) : true;
+            
+    helper.config(configData);
   }
 
   @Override
   protected void outputDocumentImpl(Document document, DocumentID documentId)
       throws IOException, GateException {
 
-    // TODO move to a thread local to save recreating each time?
-    // create the CSV writer ready for creating output
-    CSVWriter csvOut =
-        new CSVWriter(new OutputStreamWriter(getFileOutputStream(documentId),
-            encoding), separatorChar, quoteChar);
-
     // create an array to hold the column data
-    String[] data = new String[columns.length];
 
     if(annotationType == null) {
       // if we are producing one row per document then....
 
+      String[] data = new String[columns.length];
       for(int i = 0; i < columns.length; ++i) {
         // get the data for each column
         data[i] = (String)getValue(columns[i], document, null);
       }
-
-      // write the row to the output
-      csvOut.writeNext(data);
+      
+      helper.sendItem(data);
     } else {
-
       // we are producing one row per annotation so find all the annotations of
       // the correct type to treat as documents
       List<Annotation> sorted =
@@ -166,32 +184,16 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
 
       for(Annotation annotation : sorted) {
         // for each of the annotations....
-
+        String[] data = new String[columns.length];
         for(int i = 0; i < columns.length; ++i) {
           // get the data for each column
           data[i] = (String)getValue(columns[i], document, annotation);
         }
 
         // write the row to the ouput
-        csvOut.writeNext(data);
+        helper.sendItem(data);
       }
     }
-
-    // flush the writer to ensure everything is pushed into the byte array
-    csvOut.flush();
-
-    // get the bytes we will want to put into the output file
-    byte[] result = baos.get().toByteArray();
-
-    // close the CSV writer as we don't need it anymore
-    csvOut.close();
-
-    // reset the underlying byte array output stream ready for next time
-    baos.get().reset();
-
-    // store the results so that the they will eventually end up in the output
-    helper.sendItem(result);
-
   }
 
   /**
@@ -214,6 +216,12 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
     } else {
       // if it's not a document feature then it refers to an annotation
 
+      // special case - if it's foo or foo.bar and "within" is itself a "foo"
+      // just use the "within" annotation itself
+      if(within != null && parts[0].equals(within.getType())) {
+        return (parts.length == 1) ? Utils.stringFor(document, within) : within.getFeatures().get(parts[1]);
+      }
+      
       // get all annotations of the correct type (the bit before the .)
       AnnotationSet annots =
           document.getAnnotations(annotationSetName).get(parts[0]);
@@ -246,12 +254,6 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
     }
   }
   
-  @Override
-  protected OutputStream getFileOutputStream(DocumentID docId)
-          throws IOException {
-    return baos.get();
-  }
-
   @Override
   public void init() throws IOException, GateException {
     helper.init();
