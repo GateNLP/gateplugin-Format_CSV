@@ -163,7 +163,7 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
         }
       }
     } else {
-      if(compression == VALUE_COMPRESSION_GZIP) {
+      if(VALUE_COMPRESSION_GZIP.equals(compression)) {
         compression = CompressorStreamFactory.GZIP;
       }
       inputStream = new BufferedInputStream(new FileInputStream(srcFile));
