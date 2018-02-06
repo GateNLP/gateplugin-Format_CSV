@@ -54,8 +54,6 @@ public class CSVStreamingOutputHandler extends AbstractFileOutputHandler {
   private static final Logger logger = Logger
       .getLogger(CSVStreamingOutputHandler.class);
 
-  protected String encoding;
-
   protected char separatorChar;
 
   protected char quoteChar;
