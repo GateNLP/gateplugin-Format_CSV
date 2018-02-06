@@ -25,6 +25,7 @@ import gate.gui.NameBearerHandle;
 import gate.gui.ResourceHelper;
 import gate.util.ExtensionFileFilter;
 import gate.util.Files;
+import gate.util.GateException;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -35,6 +36,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -362,7 +364,7 @@ public class CSVImporter extends ResourceHelper {
                           cboFeatures.isSelected(), separator, quote);
                     }
                   }
-                } catch(Exception e) {
+                } catch(MalformedURLException e) {
                   // TODO give a sensible error message
                   e.printStackTrace();
                 }
@@ -475,7 +477,7 @@ public class CSVImporter extends ResourceHelper {
         // if this corpus is in a datastore make sure we sync it back
         corpus.getDataStore().sync(corpus);
       }
-    } catch(Exception e) {
+    } catch(RuntimeException | GateException | IOException e) {
       // not much we can do other than report the exception
       throw new RuntimeException("Unable to open CSV file: " + csv, e);
     } finally {
@@ -584,7 +586,7 @@ public class CSVImporter extends ResourceHelper {
         // if this corpus is in a datastore make sure we sync it back
         corpus.getDataStore().sync(corpus);
       }
-    } catch(Exception e) {
+    } catch(RuntimeException | GateException | IOException e) {
       // if we failed somewhere then delete the part built document
       if(doc != null) Factory.deleteResource(doc);
 
