@@ -99,8 +99,10 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
         (String[] item) -> {
           // approximate the *bytes* written as total number of
           // *characters* in the column values plus 2n quotes and
-          // n-1 commas and 1 newline
-          return Arrays.stream(item).mapToInt(v -> v.length()).sum() + 3*item.length;
+          // n-1 commas and 1 newline - this is an over-estimate
+          // if there are lots of null column values but it's
+          // not critical to be super-accurate here anyway
+          return Arrays.stream(item).mapToInt(v -> (v == null ? 0 : v.length())).sum() + 3*item.length;
         });
   }
 
