@@ -22,6 +22,7 @@ import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -173,7 +174,7 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
       String[] data = new String[columns.length];
       for(int i = 0; i < columns.length; ++i) {
         // get the data for each column
-        data[i] = (String)getValue(columns[i], document, null);
+        data[i] = Objects.toString(getValue(columns[i], document, null), null);
       }
       
       helper.sendItem(data);
