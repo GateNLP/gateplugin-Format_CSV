@@ -22,6 +22,7 @@ import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -99,8 +100,10 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
         (String[] item) -> {
           // approximate the *bytes* written as total number of
           // *characters* in the column values plus 2n quotes and
-          // n-1 commas and 1 newline
-          return Arrays.stream(item).mapToInt(v -> v.length()).sum() + 3*item.length;
+          // n-1 commas and 1 newline - this is an over-estimate
+          // if there are lots of null column values but it's
+          // not critical to be super-accurate here anyway
+          return Arrays.stream(item).mapToInt(v -> (v == null ? 0 : v.length())).sum() + 3*item.length;
         });
   }
 
@@ -171,7 +174,7 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
       String[] data = new String[columns.length];
       for(int i = 0; i < columns.length; ++i) {
         // get the data for each column
-        data[i] = (String)getValue(columns[i], document, null);
+        data[i] = Objects.toString(getValue(columns[i], document, null), null);
       }
       
       helper.sendItem(data);
