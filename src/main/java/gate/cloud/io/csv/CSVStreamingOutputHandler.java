@@ -174,7 +174,7 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
       String[] data = new String[columns.length];
       for(int i = 0; i < columns.length; ++i) {
         // get the data for each column
-        data[i] = Objects.toString(getValue(columns[i], document, null), null);
+        data[i] = Objects.toString(getValue(columns[i], document, null));
       }
       
       helper.sendItem(data);
@@ -190,7 +190,7 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
         String[] data = new String[columns.length];
         for(int i = 0; i < columns.length; ++i) {
           // get the data for each column
-          data[i] = (String)getValue(columns[i], document, annotation);
+          data[i] = Objects.toString(getValue(columns[i], document, annotation));
         }
 
         // write the row to the ouput

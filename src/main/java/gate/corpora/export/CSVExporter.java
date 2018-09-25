@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -141,8 +142,8 @@ public class CSVExporter extends CorpusExporter {
       String[] data = new String[columns.length];
       for(int i = 0; i < columns.length; ++i) {
         // get the data for each column
-        data[i] = (String)getValue(columns[i], document, null,
-            annotationSetName, containedOnly);
+        data[i] = Objects.toString(getValue(columns[i], document, null,
+            annotationSetName, containedOnly));
       }
 
       csvWriter.writeNext(data);
@@ -157,8 +158,8 @@ public class CSVExporter extends CorpusExporter {
         String[] data = new String[columns.length];
         for(int i = 0; i < columns.length; ++i) {
           // get the data for each column
-          data[i] = (String)getValue(columns[i], document, annotation,
-              annotationSetName, containedOnly);
+          data[i] = Objects.toString(getValue(columns[i], document, annotation,
+              annotationSetName, containedOnly));
         }
 
         // write the row to the ouput
