@@ -34,7 +34,7 @@ public class CSVExporter extends CorpusExporter {
       .getLogger(CSVExporter.class);
   
   public CSVExporter() {
-    super("Comma Seperated Values (CSV)", "csv", "text/csv");
+    super("Comma Separated Values (CSV)", "csv", "text/csv");
   }
 
   @RunTime
