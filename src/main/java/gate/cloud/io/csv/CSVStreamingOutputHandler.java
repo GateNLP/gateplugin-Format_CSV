@@ -204,14 +204,8 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
    */
   private Object getValue(String key, Document document, Annotation within) {
 
-    // split the key on any . that appear
-    String[] parts = key.split("\\.");
-
-    if(parts.length > 2) {
-      // currently we only support keys with at most two parts
-      logger.log(Level.WARN, "Invalid Column Key: " + key);
-      return null;
-    }
+    // split the key on the first .
+    String[] parts = key.split("\\.", 2);
 
     if(key.startsWith(".")) {
       // keys that start with a . are references to document features
