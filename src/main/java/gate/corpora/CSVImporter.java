@@ -53,6 +53,8 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringEscapeUtils;
@@ -72,6 +74,8 @@ public class CSVImporter extends ResourceHelper {
   private static JCheckBox cboFeatures = null;
 
   private static JCheckBox cboDocuments = null;
+
+  private static JCheckBox cboTextIsURL = null;
 
   private static JTextField txtURL = null;
 
@@ -98,8 +102,18 @@ public class CSVImporter extends ResourceHelper {
     cboFeatures = new JCheckBox(
         "1st Row Contains Column Labels", true);
 
+    cboTextIsURL = new JCheckBox("Cell Contains Document URL", false);
+    cboTextIsURL.setEnabled(false);
+
     cboDocuments = new JCheckBox(
         "Create One Document Per Row", false);
+    cboDocuments.addChangeListener(new ChangeListener() {
+
+		@Override
+		public void stateChanged(ChangeEvent e) {
+			cboTextIsURL.setEnabled(cboDocuments.isSelected());
+		}
+	});
 
     txtURL = new JTextField(30);
 
@@ -212,10 +226,18 @@ public class CSVImporter extends ResourceHelper {
     constraints = new GridBagConstraints();
     constraints.gridx = GridBagConstraints.RELATIVE;
     constraints.gridy = 4;
-    constraints.gridwidth = GridBagConstraints.RELATIVE;
+    constraints.gridwidth = 2;
     constraints.anchor = GridBagConstraints.NORTHWEST;
     constraints.insets = new Insets(0, 0, 15, 0);
     dialog.add(cboDocuments, constraints);
+
+    constraints = new GridBagConstraints();
+    constraints.gridx = GridBagConstraints.RELATIVE;
+    constraints.gridy = 4;
+    constraints.gridwidth = 2;
+    constraints.anchor = GridBagConstraints.NORTHWEST;
+    constraints.insets = new Insets(0, 0, 15, 0);
+    dialog.add(cboTextIsURL, constraints);
 
     constraints = new GridBagConstraints();
     constraints.gridx = GridBagConstraints.RELATIVE;
@@ -329,7 +351,7 @@ public class CSVImporter extends ResourceHelper {
                         populate((Corpus)handle.getTarget(), f.toURI().toURL(), txtEncoding.getText(),
                             (Integer)textColModel.getValue(),
                             cboFeatures.isSelected(), separator, quote,
-                            (Integer)nameColModel.getValue());
+                            (Integer)nameColModel.getValue(), cboTextIsURL.isSelected());
                       } else {
                         // if we are creating a single document from a single
                         // file
@@ -353,7 +375,7 @@ public class CSVImporter extends ResourceHelper {
                           new URL(txtURL.getText()), txtEncoding.getText(),
                           (Integer)textColModel.getValue(),
                           cboFeatures.isSelected(), separator, quote,
-                          (Integer)nameColModel.getValue());
+                          (Integer)nameColModel.getValue(), cboTextIsURL.isSelected());
                     } else {
                       // if we are creating a single document from a single file
                       // then call the createDoc method passing through all the
@@ -385,12 +407,12 @@ public class CSVImporter extends ResourceHelper {
 
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
       boolean colLabels) {
-    populate(corpus, csv, encoding, column, colLabels, ',', '"',-1);
+    populate(corpus, csv, encoding, column, colLabels, ',', '"',-1, false);
   }
   
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
       boolean colLabels, int nameColumn) {
-    populate(corpus, csv, encoding, column, colLabels, ',', '"',nameColumn);
+    populate(corpus, csv, encoding, column, colLabels, ',', '"',nameColumn, false);
   }
 
   /**
@@ -417,7 +439,7 @@ public class CSVImporter extends ResourceHelper {
    *          The default name is also used if a line does not contain that column.
    */
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
-      boolean colLabels, char separator, char quote, int nameColumn) {
+      boolean colLabels, char separator, char quote, int nameColumn, boolean textIsURL) {
     CSVReader reader = null;
     try {
       // open a CSVReader over the URL
@@ -452,8 +474,9 @@ public class CSVImporter extends ResourceHelper {
 
         // setup the initialization params for the document
         FeatureMap params = Factory.newFeatureMap();
-        params.put(Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
-            nextLine[column]);
+        params.put(textIsURL ? Document.DOCUMENT_URL_PARAMETER_NAME
+                             : Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
+                   nextLine[column]);
 
         // create the document
         Document doc =

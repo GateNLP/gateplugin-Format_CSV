@@ -56,6 +56,8 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
 
   public static final String PARAM_COLUMN = "column";
 
+  public static final String PARAM_TEXT_IS_URL = "textIsURL";
+
   private static Logger logger = Logger
     .getLogger(CSVStreamingInputHandler.class);
 
@@ -89,6 +91,8 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
   protected String[] features;
 
   protected boolean colLabels;
+
+  protected boolean textIsURL;
 
   /**
    * Compression applied to the input file. This can be
@@ -135,6 +139,7 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
     quoteChar = configData.get(PARAM_QUOTE_CHARACTER).charAt(0);
     colLabels = Boolean.parseBoolean(configData.get(PARAM_LABELLED_COLUMNS));
     column = Integer.parseInt(configData.get(PARAM_COLUMN));
+    textIsURL = Boolean.parseBoolean(configData.get(PARAM_TEXT_IS_URL));
   }
 
   @SuppressWarnings("resource")
@@ -258,8 +263,9 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
       }
 
       FeatureMap docParams = Factory.newFeatureMap();
-      docParams.put(Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
-        nextLine[column]);
+      docParams.put(textIsURL ? Document.DOCUMENT_URL_PARAMETER_NAME
+                              : Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
+                    nextLine[column]);
 
       try {
         Document gateDoc =
