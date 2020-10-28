@@ -14,19 +14,6 @@
 
 package gate.corpora;
 
-import gate.Corpus;
-import gate.Document;
-import gate.Factory;
-import gate.FeatureMap;
-import gate.creole.metadata.AutoInstance;
-import gate.creole.metadata.CreoleResource;
-import gate.gui.MainFrame;
-import gate.gui.NameBearerHandle;
-import gate.gui.ResourceHelper;
-import gate.util.ExtensionFileFilter;
-import gate.util.Files;
-import gate.util.GateException;
-
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -45,6 +32,7 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -58,12 +46,27 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.log4j.Logger;
 
 import au.com.bytecode.opencsv.CSVReader;
+import gate.Corpus;
+import gate.Document;
+import gate.Factory;
+import gate.FeatureMap;
+import gate.creole.metadata.AutoInstance;
+import gate.creole.metadata.CreoleResource;
+import gate.gui.MainFrame;
+import gate.gui.NameBearerHandle;
+import gate.gui.ResourceHelper;
+import gate.util.ExtensionFileFilter;
+import gate.util.Files;
+import gate.util.GateException;
 
 @SuppressWarnings("serial")
 @CreoleResource(name = "CSV Corpus Populater", tool = true, autoinstances = @AutoInstance, comment = "Populate a corpus from CSV files", helpURL = "http://gate.ac.uk/userguide/sec:creole:csv")
 public class CSVImporter extends ResourceHelper {
+
+  private static Logger logger = Logger.getLogger(CSVImporter.class);
 
   private static JComponent dialog = null;
 
@@ -77,6 +80,8 @@ public class CSVImporter extends ResourceHelper {
 
   private static JCheckBox cboTextIsURL = null;
 
+  private static JComboBox<FAILURE_MODE> cboFailureMode = null;
+
   private static JTextField txtURL = null;
 
   private static JTextField txtSeparator = null;
@@ -84,6 +89,23 @@ public class CSVImporter extends ResourceHelper {
   private static JTextField txtQuoteChar = null;
   
   private static JTextField txtEncoding = null;
+
+  private static enum FAILURE_MODE {
+	  STOP("Stop populating"),
+	  SKIP_ROW("Skip the row"),
+	  BEST_EFFORT("Create a \"best guess\" document");
+
+	  private final String message;
+
+	  FAILURE_MODE(String message) {
+		  this.message = message;
+	  }
+
+	  @Override
+	  public String toString() {
+		  return message;
+	  }
+  }
 
   private static FileFilter CSV_FILE_FILTER = new ExtensionFileFilter(
       "CSV Files (*.csv)", "csv");
@@ -114,6 +136,9 @@ public class CSVImporter extends ResourceHelper {
 			cboTextIsURL.setEnabled(cboDocuments.isSelected());
 		}
 	});
+
+    cboFailureMode = new JComboBox<CSVImporter.FAILURE_MODE>(FAILURE_MODE.values());
+    cboFailureMode.setSelectedItem(FAILURE_MODE.SKIP_ROW);
 
     txtURL = new JTextField(30);
 
@@ -257,8 +282,23 @@ public class CSVImporter extends ResourceHelper {
     constraints.gridx = GridBagConstraints.RELATIVE;
     constraints.gridy = 6;
     constraints.anchor = GridBagConstraints.NORTHWEST;
+    constraints.insets = new Insets(0, 0, 15, 0);
     dialog.add(new JLabel("(Ignored if single document is created)"), constraints);
     
+    constraints = new GridBagConstraints();
+    constraints.gridx = GridBagConstraints.RELATIVE;
+    constraints.gridy = 7;
+    constraints.gridwidth = 3;
+    constraints.anchor = GridBagConstraints.NORTHWEST;
+    dialog.add(new JLabel("When an error occurs"), constraints);
+
+    constraints = new GridBagConstraints();
+    constraints.gridx = GridBagConstraints.RELATIVE;
+    constraints.gridy = 7;
+    constraints.gridwidth = 3;
+    constraints.anchor = GridBagConstraints.NORTHWEST;
+    dialog.add(cboFailureMode, constraints);
+
     btnCSVURL.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
@@ -351,7 +391,7 @@ public class CSVImporter extends ResourceHelper {
                         populate((Corpus)handle.getTarget(), f.toURI().toURL(), txtEncoding.getText(),
                             (Integer)textColModel.getValue(),
                             cboFeatures.isSelected(), separator, quote,
-                            (Integer)nameColModel.getValue(), cboTextIsURL.isSelected());
+                            (Integer)nameColModel.getValue(), cboTextIsURL.isSelected(), (FAILURE_MODE)cboFailureMode.getSelectedItem());
                       } else {
                         // if we are creating a single document from a single
                         // file
@@ -375,7 +415,8 @@ public class CSVImporter extends ResourceHelper {
                           new URL(txtURL.getText()), txtEncoding.getText(),
                           (Integer)textColModel.getValue(),
                           cboFeatures.isSelected(), separator, quote,
-                          (Integer)nameColModel.getValue(), cboTextIsURL.isSelected());
+                          (Integer)nameColModel.getValue(), cboTextIsURL.isSelected(),
+                          (FAILURE_MODE)cboFailureMode.getSelectedItem());
                     } else {
                       // if we are creating a single document from a single file
                       // then call the createDoc method passing through all the
@@ -407,12 +448,12 @@ public class CSVImporter extends ResourceHelper {
 
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
       boolean colLabels) {
-    populate(corpus, csv, encoding, column, colLabels, ',', '"',-1, false);
+    populate(corpus, csv, encoding, column, colLabels, ',', '"',-1, false, FAILURE_MODE.SKIP_ROW);
   }
   
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
       boolean colLabels, int nameColumn) {
-    populate(corpus, csv, encoding, column, colLabels, ',', '"',nameColumn, false);
+    populate(corpus, csv, encoding, column, colLabels, ',', '"',nameColumn, false, FAILURE_MODE.SKIP_ROW);
   }
 
   /**
@@ -439,7 +480,7 @@ public class CSVImporter extends ResourceHelper {
    *          The default name is also used if a line does not contain that column.
    */
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
-      boolean colLabels, char separator, char quote, int nameColumn, boolean textIsURL) {
+      boolean colLabels, char separator, char quote, int nameColumn, boolean textIsURL, FAILURE_MODE failureMode) {
     CSVReader reader = null;
     try {
       // open a CSVReader over the URL
@@ -472,16 +513,45 @@ public class CSVImporter extends ResourceHelper {
           }
         }
 
-        // setup the initialization params for the document
+        Document doc = null;
         FeatureMap params = Factory.newFeatureMap();
-        params.put(textIsURL ? Document.DOCUMENT_URL_PARAMETER_NAME
-                             : Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
-                   nextLine[column]);
 
-        // create the document
-        Document doc =
-            (Document)Factory.createResource(
-                gate.corpora.DocumentImpl.class.getName(), params, fmap);
+        if (textIsURL) {
+            // setup the initialization params for the document
+            try {
+	            params.put(Document.DOCUMENT_URL_PARAMETER_NAME, nextLine[column]);
+
+	            // create the document
+	            doc =
+	                (Document)Factory.createResource(
+	                    gate.corpora.DocumentImpl.class.getName(), params, fmap);
+            }
+            catch (Exception ex) {
+                switch(failureMode) {
+                case STOP:
+                    throw ex;
+                case SKIP_ROW:
+                    logger.warn("skipping row due to exception",ex);
+                    continue;
+                case BEST_EFFORT:
+                    logger.warn("exception occured but creating row with available data",ex);
+                    doc = null;
+                    break;
+                }
+            }
+        }
+
+        if (doc == null) {
+
+            params.clear();
+            params.put(Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME, nextLine[column]);
+
+            // create the document
+            doc =
+                (Document)Factory.createResource(
+                    gate.corpora.DocumentImpl.class.getName(), params, fmap);
+        }
+
         if(nameColumn > -1 && nameColumn < nextLine.length) {
           doc.setName(nextLine[nameColumn]);
         }
