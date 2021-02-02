@@ -18,16 +18,6 @@ import static gate.cloud.io.IOConstants.PARAM_BATCH_FILE_LOCATION;
 import static gate.cloud.io.IOConstants.PARAM_ENCODING;
 import static gate.cloud.io.IOConstants.PARAM_SOURCE_FILE_LOCATION;
 import static gate.cloud.io.IOConstants.VALUE_COMPRESSION_GZIP;
-import gate.Document;
-import gate.Factory;
-import gate.FeatureMap;
-import gate.GateConstants;
-import gate.cloud.batch.Batch;
-import gate.cloud.batch.DocumentID;
-import gate.cloud.io.DocumentData;
-import gate.cloud.io.IOConstants;
-import gate.cloud.io.StreamingInputHandler;
-import gate.util.GateException;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -42,9 +32,20 @@ import java.util.Set;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import au.com.bytecode.opencsv.CSVReader;
+import gate.Document;
+import gate.Factory;
+import gate.FeatureMap;
+import gate.GateConstants;
+import gate.cloud.batch.Batch;
+import gate.cloud.batch.DocumentID;
+import gate.cloud.io.DocumentData;
+import gate.cloud.io.IOConstants;
+import gate.cloud.io.StreamingInputHandler;
+import gate.util.GateException;
 
 public class CSVStreamingInputHandler implements StreamingInputHandler {
 
@@ -58,7 +59,7 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
 
   public static final String PARAM_TEXT_IS_URL = "textIsURL";
 
-  private static Logger logger = Logger
+  private static Logger logger = LoggerFactory
     .getLogger(CSVStreamingInputHandler.class);
 
   /**

@@ -6,9 +6,6 @@ import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 import au.com.bytecode.opencsv.CSVWriter;
 import gate.Annotation;
 import gate.AnnotationSet;
@@ -29,9 +26,6 @@ tool = true, autoinstances = @AutoInstance, icon = "CSVFile" )
 public class CSVExporter extends CorpusExporter {
 
   private static final long serialVersionUID = -4584400521422513882L;
-  
-  private static final Logger logger = Logger
-      .getLogger(CSVExporter.class);
   
   public CSVExporter() {
     super("Comma Separated Values (CSV)", "csv", "text/csv");

@@ -24,9 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 import au.com.bytecode.opencsv.CSVWriter;
 import gate.Annotation;
 import gate.AnnotationSet;
@@ -55,9 +52,6 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
   public static final String PARAM_ANNOTATION_TYPE = "annotationType";
   
   public static final String PARAM_CONTAINED_ONLY = "containedOnly";
-
-  private static final Logger logger = Logger
-      .getLogger(CSVStreamingOutputHandler.class);
 
   protected char separatorChar;
 

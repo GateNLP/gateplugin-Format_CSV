@@ -46,7 +46,8 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import au.com.bytecode.opencsv.CSVReader;
 import gate.Corpus;
@@ -66,7 +67,7 @@ import gate.util.GateException;
 @CreoleResource(name = "CSV Corpus Populater", tool = true, autoinstances = @AutoInstance, comment = "Populate a corpus from CSV files", helpURL = "http://gate.ac.uk/userguide/sec:creole:csv")
 public class CSVImporter extends ResourceHelper {
 
-  private static Logger logger = Logger.getLogger(CSVImporter.class);
+  private static Logger logger = LoggerFactory.getLogger(CSVImporter.class);
 
   private static JComponent dialog = null;
 
