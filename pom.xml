@@ -19,7 +19,7 @@
 	<!-- this is the description of this plugin -->
 	<groupId>uk.ac.gate.plugins</groupId>
 	<artifactId>format-csv</artifactId>
-	<version>8.7-SNAPSHOT</version>
+	<version>8.7</version>
 
 	<name>Format: CSV</name>
 	<description>Plugin to support reading and writing CSV files with GATE and GCP</description>
