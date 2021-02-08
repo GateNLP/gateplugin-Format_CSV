@@ -331,7 +331,7 @@ public class CSVImporter extends ResourceHelper {
 
     if(!(handle.getTarget() instanceof Corpus)) return actions;
 
-    actions.add(new AbstractAction("Populate from CSV File") {
+    actions.add(new AbstractAction("Populate from CSV File...") {
       @Override
       public void actionPerformed(ActionEvent e) {
 

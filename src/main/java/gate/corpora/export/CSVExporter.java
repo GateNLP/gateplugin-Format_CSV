@@ -32,24 +32,24 @@ public class CSVExporter extends CorpusExporter {
   }
 
   @RunTime
-  @CreoleParameter(defaultValue = "UTF-8")
+  @CreoleParameter(defaultValue = "UTF-8", comment = "The encoding used to store the file")
   public void setEncoding(String encoding) { }
   public String getEncoding() { return null; }
   
   @RunTime
   @Optional
-  @CreoleParameter
+  @CreoleParameter(comment = "Produce one row per annotation of this type, or one row per document if this is not set")
   public void setAnnotationType(String annotationType) { }
   public String getAnnotationType() { return null; }
   
   @RunTime
   @Optional
-  @CreoleParameter
+  @CreoleParameter(comment = "The annotation set from which to read annotations")
   public void setAnnotationSetName(String annotationSetName) { }
   public String getAnnotationSetName() { return null; }
   
   @RunTime
-  @CreoleParameter(defaultValue = "true")
+  @CreoleParameter(defaultValue = "true", comment = "if true only use annotations strictly within the row annotation, else allow those which partially overlap")
   public void setContainedOnly(Boolean containedOnly) { }
   public Boolean getContainedOnly() { return Boolean.FALSE; }
    
@@ -64,13 +64,13 @@ public class CSVExporter extends CorpusExporter {
   public String getSeparatorCharacter() { return null; }
 
   @RunTime
-  @CreoleParameter
+  @CreoleParameter(comment = "list of columns to produce. these are defined as <Annotation>.<Feature>. If you have just .<Feature> then that is assumed to be a document feature, whereas just <Annotation> is the text under the annotation")
   public void setColumns(List<String> columns) { }
   public List<String> getColumns() { return null; }
   
   @RunTime
   @Optional
-  @CreoleParameter
+  @CreoleParameter(comment = "The values to use for a header row")
   public void setColumnHeaders(List<String> headers) { }
   public List<String> getColumnHeaders() { return null; }
   
