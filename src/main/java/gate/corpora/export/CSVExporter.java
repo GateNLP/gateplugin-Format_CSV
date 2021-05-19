@@ -125,7 +125,7 @@ public class CSVExporter extends CorpusExporter {
     @SuppressWarnings("unchecked")
     List<String> headers = (List<String>)options.get("columnHeaders");
     if(headers != null && !headers.isEmpty()) {
-      csvWriter.writeNext(headers.toArray(new String[headers.size()]));
+      csvWriter.writeNext(headers.toArray(new String[headers.size()]),false);
     }
 
     return csvWriter;
@@ -151,7 +151,7 @@ public class CSVExporter extends CorpusExporter {
             annotationSetName, containedOnly));
       }
 
-      csvWriter.writeNext(data);
+      csvWriter.writeNext(data,false);
     } else {
       // we are producing one row per annotation so find all the annotations of
       // the correct type to treat as documents
@@ -168,7 +168,7 @@ public class CSVExporter extends CorpusExporter {
         }
 
         // write the row to the ouput
-        csvWriter.writeNext(data);
+        csvWriter.writeNext(data,false);
       }
     }
 

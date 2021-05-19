@@ -97,12 +97,12 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
             .withLineEnd(ICSVWriter.RFC4180_LINE_END)
             .build();
 
-          if(columnHeaders != null) w.writeNext(columnHeaders);
+          if(columnHeaders != null) w.writeNext(columnHeaders,false);
           return w;
         },
         // write an item
         (ICSVWriter w, String[] item) -> {
-          w.writeNext(item);
+          w.writeNext(item,false);
           w.flush();
         },
         (String[] item) -> {
