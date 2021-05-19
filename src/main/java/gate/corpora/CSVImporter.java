@@ -49,7 +49,13 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import au.com.bytecode.opencsv.CSVReader;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import com.opencsv.exceptions.CsvValidationException;
+
 import gate.Corpus;
 import gate.Document;
 import gate.Factory;
@@ -482,12 +488,17 @@ public class CSVImporter extends ResourceHelper {
    */
   public static void populate(Corpus corpus, URL csv, String encoding, int column,
       boolean colLabels, char separator, char quote, int nameColumn, boolean textIsURL, FAILURE_MODE failureMode) {
-    CSVReader reader = null;
-    try {
-      // open a CSVReader over the URL
-      reader =
-          new CSVReader(new InputStreamReader(csv.openStream(),encoding), separator,
-              quote);
+
+    RFC4180Parser parser = new RFC4180ParserBuilder()
+      .withSeparator(separator)
+      .withQuoteChar(quote).build();
+
+    try (CSVReader reader = new CSVReaderBuilder(new InputStreamReader(csv.openStream(),encoding))
+      .withMultilineLimit(-1)
+      .withCSVParser(parser)
+      .withKeepCarriageReturn(false)
+      .withFieldAsNull(CSVReaderNullFieldIndicator.BOTH)
+      .build();) {
 
       // if we are adding features read the first line
       String[] features = (colLabels ? reader.readNext() : null);
@@ -571,13 +582,9 @@ public class CSVImporter extends ResourceHelper {
         // if this corpus is in a datastore make sure we sync it back
         corpus.getDataStore().sync(corpus);
       }
-    } catch(RuntimeException | GateException | IOException e) {
+    } catch(RuntimeException | GateException | IOException | CsvValidationException e) {
       // not much we can do other than report the exception
       throw new RuntimeException("Unable to open CSV file: " + csv, e);
-    } finally {
-      // if we opened the reader successfully then close it so we don't leak
-      // file handles
-      if(reader != null) IOUtils.closeQuietly(reader);
     }
   }
 
@@ -607,13 +614,19 @@ public class CSVImporter extends ResourceHelper {
    */
   public static void createDoc(Corpus corpus, URL csv, String encoding, int column,
       boolean colLabels, char separator, char quote) {
-    CSVReader reader = null;
+
     Document doc = null;
-    try {
-      // open a CSVReader over the URL
-      reader =
-          new CSVReader(new InputStreamReader(csv.openStream(),encoding), separator,
-              quote);
+
+    RFC4180Parser parser = new RFC4180ParserBuilder()
+      .withSeparator(separator)
+      .withQuoteChar(quote).build();
+
+    try (CSVReader reader = new CSVReaderBuilder(new InputStreamReader(csv.openStream(),encoding))
+      .withMultilineLimit(-1)
+      .withCSVParser(parser)
+      .withKeepCarriageReturn(false)
+      .withFieldAsNull(CSVReaderNullFieldIndicator.BOTH)
+      .build();) {
 
       // if we are adding features read the first line
       String[] features = (colLabels ? reader.readNext() : null);
@@ -680,15 +693,12 @@ public class CSVImporter extends ResourceHelper {
         // if this corpus is in a datastore make sure we sync it back
         corpus.getDataStore().sync(corpus);
       }
-    } catch(RuntimeException | GateException | IOException e) {
+    } catch(RuntimeException | GateException | IOException | CsvValidationException e) {
       // if we failed somewhere then delete the part built document
       if(doc != null) Factory.deleteResource(doc);
 
       // throw a "helpful" exception
       throw new RuntimeException("Unable to open CSV file: " + csv, e);
-    } finally {
-      // if we got as far as opening a reader over the file then close it
-      if(reader != null) IOUtils.closeQuietly(reader);
     }
   }
 }

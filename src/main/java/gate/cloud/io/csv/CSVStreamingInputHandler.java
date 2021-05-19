@@ -35,7 +35,13 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import au.com.bytecode.opencsv.CSVReader;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import com.opencsv.exceptions.CsvValidationException;
+
 import gate.Document;
 import gate.Factory;
 import gate.FeatureMap;
@@ -202,11 +208,22 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
       }
     }
 
-    csvReader =
-      new CSVReader(new InputStreamReader(inputStream, encoding),
-        separatorChar, quoteChar);
+    RFC4180Parser parser = new RFC4180ParserBuilder()
+      .withSeparator(separatorChar)
+      .withQuoteChar(quoteChar).build();
 
-    features = (colLabels ? csvReader.readNext() : null);
+    csvReader = new CSVReaderBuilder(new InputStreamReader(inputStream, encoding))
+      .withMultilineLimit(-1)
+      .withCSVParser(parser)
+      .withKeepCarriageReturn(false)
+      .withFieldAsNull(CSVReaderNullFieldIndicator.BOTH)
+      .build();
+
+    try {
+		features = (colLabels ? csvReader.readNext() : null);
+	} catch (CsvValidationException e) {
+		throw new IOException("Unable to read column labels from CSV file", e);
+	}
 
     idCounter = (colLabels ? 1 : 0);
 
@@ -235,50 +252,54 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
     // get the next line from the CSV file
     String[] nextLine;
 
-    while((nextLine = csvReader.readNext()) != null) {
+    try {
+		while((nextLine = csvReader.readNext()) != null) {
 
-      // skip the line if there are less columns than we need to get to the
-      // content
-      if(column >= nextLine.length) continue;
+		  // skip the line if there are less columns than we need to get to the
+		  // content
+		  if(column >= nextLine.length) continue;
 
-      // skip the line if the column with the content is empty
-      if(nextLine[column].trim().equals("")) continue;
+		  // skip the line if the column with the content is empty
+		  if(nextLine[column].trim().equals("")) continue;
 
-      String id = srcFile.getName() + "." + idCounter++;
+		  String id = srcFile.getName() + "." + idCounter++;
 
-      if(completedDocuments.contains(id)) continue;
+		  if(completedDocuments.contains(id)) continue;
 
-      DocumentID docId = new DocumentID(id);
+		  DocumentID docId = new DocumentID(id);
 
-      FeatureMap docFeatures = Factory.newFeatureMap();
-      docFeatures.put(GateConstants.THROWEX_FORMAT_PROPERTY_NAME, Boolean.TRUE);
-      
-      if(colLabels) {
-        // copy all the features from the row into a FeatureMap using the
-        // labels from the first line
-        for(int i = 0; i < features.length; ++i) {
-          if(i != column && i < nextLine.length) {
-            docFeatures.put(features[i], nextLine[i]);
-          }
-        }
-      }
+		  FeatureMap docFeatures = Factory.newFeatureMap();
+		  docFeatures.put(GateConstants.THROWEX_FORMAT_PROPERTY_NAME, Boolean.TRUE);
 
-      FeatureMap docParams = Factory.newFeatureMap();
-      docParams.put(textIsURL ? Document.DOCUMENT_URL_PARAMETER_NAME
-                              : Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
-                    nextLine[column]);
+		  if(colLabels) {
+		    // copy all the features from the row into a FeatureMap using the
+		    // labels from the first line
+		    for(int i = 0; i < features.length; ++i) {
+		      if(i != column && i < nextLine.length) {
+		        docFeatures.put(features[i], nextLine[i]);
+		      }
+		    }
+		  }
 
-      try {
-        Document gateDoc =
-          (Document)Factory.createResource("gate.corpora.DocumentImpl",
-            docParams, docFeatures, id);
-        return new DocumentData(gateDoc, docId);
-      } catch(Exception e) {
-        logger.warn("Error encountered while parsing object with ID " + id +
-          " - skipped", e);
-      }
+		  FeatureMap docParams = Factory.newFeatureMap();
+		  docParams.put(textIsURL ? Document.DOCUMENT_URL_PARAMETER_NAME
+		                          : Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
+		                nextLine[column]);
 
-    }
+		  try {
+		    Document gateDoc =
+		      (Document)Factory.createResource("gate.corpora.DocumentImpl",
+		        docParams, docFeatures, id);
+		    return new DocumentData(gateDoc, docId);
+		  } catch(Exception e) {
+		    logger.warn("Error encountered while parsing object with ID " + id +
+		      " - skipped", e);
+		  }
+
+		}
+	} catch (CsvValidationException e) {
+		throw new IOException("Unable to read row from CSV file", e);
+	}
 
     return null;
   }

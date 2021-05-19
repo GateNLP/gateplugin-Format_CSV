@@ -6,7 +6,12 @@ import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Objects;
 
-import au.com.bytecode.opencsv.CSVWriter;
+import com.opencsv.CSVWriter;
+import com.opencsv.CSVWriterBuilder;
+import com.opencsv.ICSVWriter;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+
 import gate.Annotation;
 import gate.AnnotationSet;
 import gate.Corpus;
@@ -79,7 +84,7 @@ public class CSVExporter extends CorpusExporter {
   public void export(Corpus corpus, OutputStream out, FeatureMap options)
       throws IOException {
 
-    CSVWriter csvWriter = createWriter(out, options);
+    ICSVWriter csvWriter = createWriter(out, options);
         
     for (Document doc : corpus) {
       save(doc,csvWriter,options);
@@ -90,11 +95,11 @@ public class CSVExporter extends CorpusExporter {
   public void export(Document doc, OutputStream out, FeatureMap options)
       throws IOException {
     
-    CSVWriter csvWriter = createWriter(out,options);
+    ICSVWriter csvWriter = createWriter(out,options);
     save(doc,csvWriter,options);
   }
   
-  private CSVWriter createWriter(OutputStream out, FeatureMap options)
+  private ICSVWriter createWriter(OutputStream out, FeatureMap options)
       throws IOException {
     String encoding = options.containsKey("encoding")
         ? (String)options.get("encoding")
@@ -108,8 +113,14 @@ public class CSVExporter extends CorpusExporter {
         ? ((String)options.get("quoteCharacter")).charAt(0)
         : CSVWriter.DEFAULT_QUOTE_CHARACTER;
 
-    CSVWriter csvWriter = new CSVWriter(new OutputStreamWriter(out, encoding),
-        separatorChar, quoteChar);
+    RFC4180Parser parser = new RFC4180ParserBuilder()
+      .withSeparator(separatorChar)
+      .withQuoteChar(quoteChar).build();
+
+    ICSVWriter csvWriter = new CSVWriterBuilder(new OutputStreamWriter(out, encoding))
+      .withParser(parser)
+      .withLineEnd(ICSVWriter.RFC4180_LINE_END)
+      .build();
 
     @SuppressWarnings("unchecked")
     List<String> headers = (List<String>)options.get("columnHeaders");
@@ -120,7 +131,7 @@ public class CSVExporter extends CorpusExporter {
     return csvWriter;
   }
 
-  private void save(Document document, CSVWriter csvWriter, FeatureMap options)
+  private void save(Document document, ICSVWriter csvWriter, FeatureMap options)
       throws IOException {
 
     String annotationType = (String)options.get("annotationType");

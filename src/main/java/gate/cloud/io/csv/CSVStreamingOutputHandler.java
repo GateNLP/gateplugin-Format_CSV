@@ -24,7 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import au.com.bytecode.opencsv.CSVWriter;
+import com.opencsv.CSVWriter;
+import com.opencsv.CSVWriterBuilder;
+import com.opencsv.ICSVWriter;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
+
 import gate.Annotation;
 import gate.AnnotationSet;
 import gate.Document;
@@ -75,19 +80,28 @@ public class CSVStreamingOutputHandler extends AbstractOutputHandler {
   
   protected String encoding;
   
-  private StreamingFileOutputHelper<String[], CSVWriter> helper;
+  private StreamingFileOutputHelper<String[], ICSVWriter> helper;
   
   public CSVStreamingOutputHandler() {
-    helper = new StreamingFileOutputHelper<String[], CSVWriter>(
+    helper = new StreamingFileOutputHelper<String[], ICSVWriter>(
         new String[0],
         // opening a new chunk - wrap the stream in a CSVWriter
         stream -> {
-          CSVWriter w = new CSVWriter(new OutputStreamWriter(stream, encoding), separatorChar, quoteChar);
+
+          RFC4180Parser parser = new RFC4180ParserBuilder()
+            .withSeparator(separatorChar)
+            .withQuoteChar(quoteChar).build();
+
+          ICSVWriter w = new CSVWriterBuilder(new OutputStreamWriter(stream, encoding))
+            .withParser(parser)
+            .withLineEnd(ICSVWriter.RFC4180_LINE_END)
+            .build();
+
           if(columnHeaders != null) w.writeNext(columnHeaders);
           return w;
         },
         // write an item
-        (CSVWriter w, String[] item) -> {
+        (ICSVWriter w, String[] item) -> {
           w.writeNext(item);
           w.flush();
         },
