@@ -281,6 +281,9 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
 		    }
 		  }
 
+		  if (textIsURL && nextLine[column].startsWith("www"))
+			  nextLine[column] = "http://"+nextLine[column];
+
 		  FeatureMap docParams = Factory.newFeatureMap();
 		  docParams.put(textIsURL ? Document.DOCUMENT_URL_PARAMETER_NAME
 		                          : Document.DOCUMENT_STRING_CONTENT_PARAMETER_NAME,
@@ -290,6 +293,7 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
 		    Document gateDoc =
 		      (Document)Factory.createResource("gate.corpora.DocumentImpl",
 		        docParams, docFeatures, id);
+
 		    return new DocumentData(gateDoc, docId);
 		  } catch(Exception e) {
 		    logger.warn("Error encountered while parsing object with ID " + id +
