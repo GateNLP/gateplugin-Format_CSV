@@ -64,6 +64,8 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
   public static final String PARAM_COLUMN = "column";
 
   public static final String PARAM_TEXT_IS_URL = "textIsURL";
+  
+  public static final String PARAM_ID = "id";
 
   private static Logger logger = LoggerFactory
     .getLogger(CSVStreamingInputHandler.class);
@@ -94,6 +96,8 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
   protected long idCounter;
 
   protected int column;
+  
+  protected int idColumn = -1;
 
   protected String[] features;
 
@@ -147,6 +151,8 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
     colLabels = Boolean.parseBoolean(configData.get(PARAM_LABELLED_COLUMNS));
     column = Integer.parseInt(configData.get(PARAM_COLUMN));
     textIsURL = Boolean.parseBoolean(configData.get(PARAM_TEXT_IS_URL));
+    
+    if (configData.containsKey(PARAM_ID)) idColumn = Integer.parseInt(configData.get(PARAM_ID));
   }
 
   @SuppressWarnings("resource")
@@ -263,6 +269,8 @@ public class CSVStreamingInputHandler implements StreamingInputHandler {
 		  if(nextLine[column].trim().equals("")) continue;
 
 		  String id = srcFile.getName() + "." + idCounter++;
+		  
+		  if (idColumn != -1) id = nextLine[idColumn];
 
 		  if(completedDocuments.contains(id)) continue;
 
